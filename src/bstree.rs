@@ -92,7 +92,7 @@ struct BstreeNode<T> {
     pub right: Option<Box<BstreeNode<T>>>,
 }
 
-impl<T: std::cmp::Ord + Clone> BstreeNode<T> {
+impl<T: std::cmp::Ord> BstreeNode<T> {
     pub fn new(val: T) -> Box<BstreeNode<T>> {
         Box::new(BstreeNode {
             val: val,
@@ -115,22 +115,24 @@ impl<T: std::cmp::Ord + Clone> BstreeNode<T> {
         }
     }
 
-    pub fn insert(node: &mut Option<Box<BstreeNode<T>>>, val: &T) -> bool {
+    pub fn insert(node: &mut Option<Box<BstreeNode<T>>>, val: T) -> bool {
         if let Some(n) = node {
-            if val < &n.val {
+            if val < n.val {
                 BstreeNode::insert(&mut n.left, val)
-            } else if val > &n.val {
+            } else if val > n.val {
                 BstreeNode::insert(&mut n.right, val)
             } else {
                 false
             }
         } else {
-            *node = Some(BstreeNode::new(val.clone()));
+            *node = Some(BstreeNode::new(val));
 
             true
         }
     }
+}
 
+impl<T: std::cmp::Ord + Clone> BstreeNode<T> {
     pub fn delete(node: &mut Option<Box<BstreeNode<T>>>, val: &T) -> bool {
         if let Some(n) = node {
             if val < &n.val {
@@ -208,21 +210,23 @@ pub struct Bstree<T> {
     root: Option<Box<BstreeNode<T>>>,
 }
 
-impl<T: std::cmp::Ord+ Clone> Bstree<T> {
+impl<T: std::cmp::Ord> Bstree<T> {
     pub fn new() -> Self {
         Bstree { root: None }
     }
 
-    pub fn insert(&mut self, val: &T) -> bool {
+    pub fn insert(&mut self, val: T) -> bool {
         BstreeNode::insert(&mut self.root, val)
-    }
-
-    pub fn delete(&mut self, val: &T) -> bool {
-        BstreeNode::delete(&mut self.root, val)
     }
 
     pub fn exist(&self, val: &T) -> bool {
         BstreeNode::in_sub_tree(&self.root, val)
+    }
+}
+
+impl<T: std::cmp::Ord + Clone> Bstree<T> {
+    pub fn delete(&mut self, val: &T) -> bool {
+        BstreeNode::delete(&mut self.root, val)
     }
 
     pub fn print(&self) where T: std::fmt::Display {
@@ -244,12 +248,12 @@ mod tests {
 
         // init and insert
         let mut root = Some(BstreeNode::new(10));
-        BstreeNode::insert(&mut root, &15);
-        BstreeNode::insert(&mut root, &5);
-        BstreeNode::insert(&mut root, &3);
-        BstreeNode::insert(&mut root, &7);
-        BstreeNode::insert(&mut root, &12);
-        BstreeNode::insert(&mut root, &18);
+        BstreeNode::insert(&mut root, 15);
+        BstreeNode::insert(&mut root, 5);
+        BstreeNode::insert(&mut root, 3);
+        BstreeNode::insert(&mut root, 7);
+        BstreeNode::insert(&mut root, 12);
+        BstreeNode::insert(&mut root, 18);
 
         assert!(BstreeNode::in_sub_tree(&root, &10));
         assert!(BstreeNode::in_sub_tree(&root, &15));
@@ -300,13 +304,13 @@ mod tests {
 
         // init and insert
         let mut bstree: Bstree<i32> = Bstree::new();
-        bstree.insert(&10);
-        bstree.insert(&15);
-        bstree.insert(&5);
-        bstree.insert(&3);
-        bstree.insert(&7);
-        bstree.insert(&12);
-        bstree.insert(&18);
+        bstree.insert(10);
+        bstree.insert(15);
+        bstree.insert(5);
+        bstree.insert(3);
+        bstree.insert(7);
+        bstree.insert(12);
+        bstree.insert(18);
 
         assert!(bstree.exist(&10));
         assert!(bstree.exist(&15));
