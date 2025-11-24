@@ -1,89 +1,3 @@
-// pub struct BstreeNode<T> {
-//     pub val: T,
-//     pub left: Option<Box<BstreeNode<T>>>,
-//     pub right: Option<Box<BstreeNode<T>>>,
-// }
-
-
-
-
-// 3 (indent 0)
-// \__ 1 (indent 1)
-//     \__ NONE (indent 2)
-//     \__ 2
-// \__ 4
-//     \__ NONE
-//     \__ 5
-// 
-
-// pub fn print_bstree<W: Write, T: std::fmt::Display>(writer: &mut W, root: &BstreeNode<T>, indent: usize, tag: &str) {
-//     for _ in 0..indent.saturating_sub(1) {
-//         write!(writer, "    ").unwrap();
-//     }
-//     if indent > 0 {
-//         write!(writer, "\\__ ").unwrap();
-//     }
-//     writeln!(writer, "{}: {}", tag, root.val).unwrap();
-
-//     if let Some(left_node) = &root.left {
-//         print_bstree(writer, &left_node, indent + 1, "left");
-//     } else {
-//         for _ in 0..indent {
-//             write!(writer, "    ").unwrap();
-//         }
-//         writeln!(writer, "\\__ left: NONE").unwrap();
-//     }
-//     if let Some(right_node) = &root.right {
-//         print_bstree(writer, &right_node, indent + 1, "right");
-//     } else {
-//         for _ in 0..indent {
-//             write!(writer, "    ").unwrap();
-//         }
-//         writeln!(writer, "\\__ right: NONE").unwrap();
-//     }
-// }
-
-// pub fn print_bstree_stdout<T: std::fmt::Display>(root: &BstreeNode<T>, indent: usize, tag: &str) {
-//     let stdout = std::io::stdout();
-//     let mut handle = stdout.lock();
-//     print_bstree(&mut handle, root, indent, tag);
-// }
-
-// pub fn insert_bstree_node<T: std::cmp::PartialOrd + std::fmt::Display>(root: &mut BstreeNode<T>, val: T) {
-//     if val < root.val {
-//         if let Some(left_node) = &mut root.left {
-//             insert_bstree_node(left_node, val);
-//         } else {
-//             root.left = Some(create_bstree_node(val));
-//         }
-//     } else if val > root.val {
-//         if let Some(right_node) = &mut root.right {
-//             insert_bstree_node(right_node, val);
-//         } else {
-//             root.right = Some(create_bstree_node(val));
-//         }
-//     } else {
-//         println!("Value {} already exists in the BSTree.", val);
-//     }
-// }
-
-// pub fn value_exists_in_bstree<T: std::cmp::PartialOrd>(root: & BstreeNode<T>, val: T) -> bool{
-// 	if val < root.val {
-// 		if let Some(left) = &root.left {
-// 			value_exists_in_bstree(left, val)
-// 		} else {
-// 			false
-// 		}
-// 	} else if val > root.val {
-// 		if let Some(right) = &root.right {
-// 			value_exists_in_bstree(right, val)
-// 		} else {
-// 			false
-// 		}
-// 	} else {
-// 		true
-// 	}
-// }
 use std::io::Write;
 
 struct BstreeNode<T> {
@@ -166,6 +80,13 @@ impl<T: std::cmp::Ord + Clone> BstreeNode<T> {
         }
     }
 
+    // 3 (indent 0)
+    // \__ 1 (indent 1)
+    //     \__ NONE (indent 2)
+    //     \__ 2
+    // \__ 4
+    //     \__ NONE
+    //     \__ 5
     pub fn print_sub_tree<W: Write>(writer: &mut W, node: &Box<BstreeNode<T>>, indent: i32, tag: &str)
         where T: std::fmt::Display
     {
