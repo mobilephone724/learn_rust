@@ -1,5 +1,5 @@
 
-// mod bstree;
+mod bstree;
 // use bstree::*;
 
 fn main() {

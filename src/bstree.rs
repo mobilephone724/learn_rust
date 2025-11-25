@@ -15,34 +15,29 @@ impl<T: std::cmp::Ord> BstreeNode<T> {
         })
     }
 
-    pub fn in_sub_tree(node: &Option<Box<BstreeNode<T>>>, val: &T) -> bool {
-        let Some(n) = node.as_ref() else {
-            return false;
-        };
-
-        if val < &n.val {
-            BstreeNode::in_sub_tree(&n.left, val)
-        } else if val > &n.val {
-            BstreeNode::in_sub_tree(&n.right, val)
-        } else {
-            true
+    pub fn in_sub_tree(mut node: &Option<Box<BstreeNode<T>>>, val: &T) -> bool {
+        while let Some(n) = node {
+            match val.cmp(&n.val) {
+                std::cmp::Ordering::Less => node = &n.left,
+                std::cmp::Ordering::Greater => node = &n.right,
+                std::cmp::Ordering::Equal => return true,
+            }
         }
+
+        false
     }
 
-    pub fn insert(node: &mut Option<Box<BstreeNode<T>>>, val: T) -> bool {
-        if let Some(n) = node {
-            if val < n.val {
-                BstreeNode::insert(&mut n.left, val)
-            } else if val > n.val {
-                BstreeNode::insert(&mut n.right, val)
-            } else {
-                false
+    pub fn insert(mut node: &mut Option<Box<BstreeNode<T>>>, val: T) -> bool {
+        while let Some(n) = node {
+            match val.cmp(&n.val) {
+                std::cmp::Ordering::Less => node = &mut n.left,
+                std::cmp::Ordering::Greater => node = &mut n.right,
+                std::cmp::Ordering::Equal => return false,
             }
-        } else {
-            *node = Some(BstreeNode::new(val));
-
-            true
         }
+
+        *node = Some(BstreeNode::new(val));
+        true
     }
 
     fn extract_max(node: &mut Option<Box<BstreeNode<T>>>) -> T {
