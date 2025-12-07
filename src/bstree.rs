@@ -40,42 +40,70 @@ impl<T: std::cmp::Ord> BstreeNode<T> {
         true
     }
 
-    fn extract_max(node: &mut Option<Box<BstreeNode<T>>>) -> T {
-        // if node is none or its right node is none, this node is the max one
-        // and_then() returns the value in it or none if input (node.as_ref()) is none
-        if node.as_ref().and_then(|n| n.right.as_ref()).is_none() {
-            // extract the node input, and clear the option
-            let mut max_node = node.take().expect("extract_max called on empty node");
-
-            // rebuild in input node with its left child
-            *node = max_node.left.take();
-
-            // the original value of input node is "moved out". No data copy happens here
-            max_node.val
-
-            // lifetime of max_node ends
-        } else {
-            // get the max one on its right node recursively. Note that nothing changes here
-            let next = node.as_mut().expect("missing node while extracting max");
-            BstreeNode::extract_max(&mut next.right)
+    // get the max value of the subtree and remove the corresponding node
+    fn extract_max(mut node: &mut Option<Box<BstreeNode<T>>>) -> T {
+        // let node = node.as_mut().expect("input value must not be None");
+        // let node
+        if node.is_none() {
+            panic!("extract_max called on empty node");
         }
+
+        // This is OK
+        while node.as_ref().is_some_and(|n| n.right.is_some()) {
+            node = &mut node.as_mut().expect("parano check").right;
+        }
+
+        //  This is still OK
+        //
+        // loop {
+        //     if node.as_ref().is_some() && node.as_ref().unwrap().right.is_some() {
+        //         node = &mut node.as_mut().unwrap().right;
+        //     } else {
+        //         break;
+        //     }
+        // }
+
+        // This is NOT OK since node is borrowed inside the loop
+        //
+        // while let Some(r) = node {       // `r` borrows from `node`
+        //     if r.right.is_some() {
+        //         node = &mut r.right;     // `r` must stay alive for this assignment
+        //     } else {
+        //         break;                   // `r` still considered borrowed after break
+        //     }
+        // }
+
+        let mut max_node = node.take().expect("fail to get the max value");
+        *node = max_node.left.take();
+
+        max_node.val
+    }
+
+    fn get_target_node_mut<'a>(
+        mut node: &'a mut Option<Box<BstreeNode<T>>>,
+        val: &T,
+    ) -> Option<&'a mut Option<Box<BstreeNode<T>>>> {
+        loop {
+            // 1. Compare: `?` returns None if node is None.
+            // The immutable borrow of `node` ends after this statement.
+            let ordering = val.cmp(&node.as_ref()?.val);
+
+            // 2. Mutate/Return: We can now safely borrow `node` mutably again.
+            match ordering {
+                std::cmp::Ordering::Less => node = &mut node.as_mut()?.left,
+                std::cmp::Ordering::Greater => node = &mut node.as_mut()?.right,
+                std::cmp::Ordering::Equal => return Some(node),
+            }
+        }
+
+        None
     }
 
     pub fn delete(node: &mut Option<Box<BstreeNode<T>>>, val: &T) -> bool {
-        let Some(current) = node.as_mut() else {
+        let Some(node) = Self::get_target_node_mut(node, val) else {
             return false;
         };
 
-        if val < &current.val {
-            return BstreeNode::delete(&mut current.left, val);
-        } else if val > &current.val {
-            return BstreeNode::delete(&mut current.right, val);
-        }
-
-        // At this point, we've found the node to delete. We detach it from the tree
-        // and then reattach its children appropriately based on three cases:
-        // If we changed the content in Option, we actually complete the pointer redirection.
-        // After this statement, variable "current" is dropped
         let mut target = node.take().unwrap();
 
         if target.left.is_none() {
@@ -205,6 +233,7 @@ mod tests {
 
         // delete
         assert!(BstreeNode::delete(&mut root, &10));
+        assert!(!BstreeNode::delete(&mut root, &7890));
 
         assert!(BstreeNode::in_sub_tree(&root, &15));
         assert!(BstreeNode::in_sub_tree(&root, &5));
@@ -235,7 +264,6 @@ mod tests {
             let expected = lines.join("\n") + "\n";
             assert_eq!(output, expected);
         }
-
 
         //  ====================================================
 
@@ -297,16 +325,31 @@ mod tests {
     #[test]
     fn test_struct_bst() {
         let mut bstree = Bstree::new();
-        let u1 = User { id: 1, name: "Alice".to_string() };
-        let u2 = User { id: 2, name: "Bob".to_string() };
-        let u3 = User { id: 3, name: "Charlie".to_string() };
+        let u1 = User {
+            id: 1,
+            name: "Alice".to_string(),
+        };
+        let u2 = User {
+            id: 2,
+            name: "Bob".to_string(),
+        };
+        let u3 = User {
+            id: 3,
+            name: "Charlie".to_string(),
+        };
 
-        bstree.insert(u2); 
-        bstree.insert(u1); 
-        bstree.insert(u3); 
+        bstree.insert(u2);
+        bstree.insert(u1);
+        bstree.insert(u3);
 
-        assert!(bstree.exist(&User { id: 1, name: "Alice".to_string() }));
-        assert!(!bstree.exist(&User { id: 4, name: "Dave".to_string() }));
+        assert!(bstree.exist(&User {
+            id: 1,
+            name: "Alice".to_string()
+        }));
+        assert!(!bstree.exist(&User {
+            id: 4,
+            name: "Dave".to_string()
+        }));
     }
 
     #[test]
@@ -331,7 +374,7 @@ mod tests {
         // Delete a leaf
         bstree.delete(&20);
         assert!(!bstree.exist(&20));
-        
+
         // Delete a node with one child (let's add one first)
         bstree.insert(90); // 80 -> 90
         bstree.delete(&80);
@@ -358,4 +401,3 @@ mod tests {
         assert!(bstree.exist(&90));
     }
 }
-
