@@ -95,8 +95,6 @@ impl<T: std::cmp::Ord> BstreeNode<T> {
                 std::cmp::Ordering::Equal => return Some(node),
             }
         }
-
-        None
     }
 
     pub fn delete(node: &mut Option<Box<BstreeNode<T>>>, val: &T) -> bool {
