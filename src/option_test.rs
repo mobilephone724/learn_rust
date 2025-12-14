@@ -1,47 +1,75 @@
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_copy_trait() {
-        let op_copy: Option<i32> = Some(1);
+        let op_int: Option<i32> = Some(1);
 
-        if let Some(mut val1) = op_copy {
+        if let Some(mut val1) = op_int {
             val1 = 2;
             println!("Taken value: {val1}");
-        } else {
-            println!("op_copy was None");
         }
-
-        if op_copy.is_some() {
-            let val2 = op_copy.unwrap();
-            println!("Taken value: {val2}");
-        }
-
-        if let Some(val3) = op_copy {
-            println!("Taken value: {val3}");
-        } else {
-            println!("op_copy was None");
+        
+        if op_int.is_some() {
+            println!("{:?}", op_int.unwrap());
         }
     }
 
     #[test]
     fn test_non_copy_trait() {
-        struct NonCopy {
-            data: String,
-        }
+        let mut op_string = Some("alpha".to_string());
 
-        let op_non_copy = Some(NonCopy {
-            data: "alpha".to_string(),
-        });
-
-        if let Some(mut borrowed) = op_non_copy {
-            borrowed.data = "beta".to_string();
-            println!("Borrowed value: {}", borrowed.data);
+        if let Some(ref mut string_taken) = op_string {
+            *string_taken = "beta".to_string();
+            println!("taken value: {}", string_taken);
         }
 
         // This is NOT OK 
-        // println!("{:?}", op_non_copy.unwrap().data);
+        // if op_string.is_some() {
+        //     println!("{:?}", op_string.unwrap());
+        // }
+
+        println!("----------------------------------");
+
+        let mut op_string_1 = Some("alpha".to_string());
+
+        if let Some(ref mut val) = op_string_1 {
+            *val = "beta".to_string();
+            println!("taken value of string_1: {}", val);
+        }
+
+        if op_string_1.is_some() {
+            println!("value of string_1 {:?}", op_string_1.unwrap());
+        }
+
+        println!("----------------------------------");
+
+        let mut op_string_2 = Some("aaa".to_string());
+
+        if let Some(val) = op_string_2.as_mut() {
+            *val = "bbb".to_string();
+            println!("value of string_2: {}", val);
+        }
+
+        if op_string_2.is_some() {
+            println!("value of string_2 {:?}", op_string_2.unwrap());
+        }
+    }
+
+    #[test]
+    fn test_ref_option() {
+        let mut op_string: Option<String> = Some("aaa".to_string());
+
+        let op_string_ref = &mut op_string;
+
+        if let Some(val) = op_string_ref {
+            *val = "bbb".to_string();
+            println!("value of string: {}", val);
+        }
+
+        if let Some(val) = op_string_ref {
+            *val = "ccc".to_string();
+            println!("value of string: {}", val);
+        }
     }
 
     #[test]
