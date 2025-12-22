@@ -7,7 +7,7 @@ use std::string;
 #[derive(Eq, PartialEq)]
 pub struct HuffmanTreeNode {
     pub weight: i32,
-    pub substr: String,
+    pub val: Vec<u8>,
     pub left: Option<Box<HuffmanTreeNode>>,
     pub right: Option<Box<HuffmanTreeNode>>,
 }
@@ -25,19 +25,9 @@ impl PartialOrd for HuffmanTreeNode {
     }
 }
 
-// pub fn build_sample_vector() -> Vec<&'static str> {
-//     let mut values = Vec::new();
-//     values.push("alpha");
-//     values.push("beta");
-//     values.push("gamma");
-//     values
-// }
-
 pub type HuffmanTree = BinaryHeap<HuffmanTreeNode>;
 
-// Using a tuple (most common for pairs)
-
-// Or using a struct for more clarity
+#[derive(Copy, Clone)]
 pub struct HaffmanCompressedCode {
     pub val: i32,
     pub mask: i32
@@ -67,13 +57,7 @@ impl std::fmt::Display for HaffmanCompressedCode {
     }
 }
 
-impl std::fmt::Debug for HaffmanCompressedCode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "HaffmanCompressedCode {{ val: {}, mask: {} }}", self.val, self.mask)
-    }
-}
-
-// For your specific use case with Huffman encoding:
+pub type HaffmanCompressedDict = HashMap<u8, HaffmanCompressedCode>;
 
 
 pub fn generate_haffman_tree_nodes() -> Vec<HuffmanTreeNode> {
@@ -81,21 +65,21 @@ pub fn generate_haffman_tree_nodes() -> Vec<HuffmanTreeNode> {
 
     res.push(HuffmanTreeNode {
         weight: 10,
-        substr: "A".to_string(),
+        val: vec![b'A'],
         left: None,
         right: None,
     });
 
     res.push(HuffmanTreeNode {
         weight: 20,
-        substr: "B".to_string(),
+        val: vec![b'B'],
         left: None,
         right: None,
     });
 
     res.push(HuffmanTreeNode {
         weight: 25,
-        substr: "C".to_string(),
+        val: vec![b'C'],
         left: None,
         right: None,
     });
@@ -121,9 +105,12 @@ pub fn generate_haffman_tree(nodes: Vec<HuffmanTreeNode>) -> HuffmanTree {
             break;
         };
 
+        let mut new_val = n1.val.clone();
+        new_val.extend_from_slice(&n2.val);
+
         res.push(HuffmanTreeNode {
             weight: n1.weight + n2.weight,
-            substr: format!("{}{}", n1.substr, n2.substr),
+            val: new_val,
             left: Some(Box::new(n1)),
             right: Some(Box::new(n2)),
         });
@@ -133,41 +120,42 @@ pub fn generate_haffman_tree(nodes: Vec<HuffmanTreeNode>) -> HuffmanTree {
 }
 
 
-pub fn generate_haffman_dic(node_tree: &mut BinaryHeap<HuffmanTreeNode>) -> HashMap<char, String> {
+pub fn generate_haffman_dic(node_tree: &mut BinaryHeap<HuffmanTreeNode>) -> HaffmanCompressedDict {
     let Some(root) = node_tree.pop() else {
         panic!("no in haffman tree");
     };
 
-    generate_haffman_dic_internal(&Box::new(root), &"0".to_string())
+    generate_haffman_dic_internal(&Box::new(root), HaffmanCompressedCode {val: 0, mask: 0})
 }
 
-fn generate_haffman_dic_internal(node: &Box<HuffmanTreeNode>, prefix: &String) -> HashMap<char, String> {
-    println!("In haffman dic recursion: cur node is {} with prefix {}", node.substr, prefix);
+fn generate_haffman_dic_internal(node: &Box<HuffmanTreeNode>, mut current_compress_code: HaffmanCompressedCode) -> HaffmanCompressedDict {
+    println!("In haffman dic recursion: cur node is {:?} with prefix {}", node.val, current_compress_code);
 
-    if node.substr.len() == 1 {
-        let mut res: HashMap<char, String> = HashMap::new();
-        let Some(ch) = node.substr.chars().nth(0) else {
-            panic!("cannot get the first char in string {}", node.substr);
-        };
+    if node.val.len() == 1 {
+        let mut res: HaffmanCompressedDict = HashMap::new();
 
-        res.insert(ch, prefix.clone());
+        if current_compress_code.mask == 0 {
+            current_compress_code.mask = 1;
+        }
 
-        println!("length is 1, return single value {}-{}", ch, prefix);
+        res.insert(node.val[0], current_compress_code);
+
+        println!("length is 1, return single value {}-{}", node.val[0], current_compress_code);
         return res;
     }
 
     let Some(left) = node.left.as_ref() else {
-        panic!("cannot get the left child in node {} with weight {}", node.substr, node.weight);
+        panic!("cannot get the left child in node {:?} with weight {}", node.val, node.weight);
     };
 
     let Some(right) = node.right.as_ref() else {
-        panic!("cannot get the right child in node {} with weight {}", node.substr, node.weight);
+        panic!("cannot get the right child in node {:?} with weight {}", node.val, node.weight);
     };
 
-    let mut left_map = generate_haffman_dic_internal(left, &format!("{}1", prefix));
-    let right_map = generate_haffman_dic_internal(right, &format!("{}0", prefix));
+    let mut left_map = generate_haffman_dic_internal(left, HaffmanCompressedCode {val: (current_compress_code.val << 1) + 1, mask: (current_compress_code.mask << 1) + 1});
+    let right_map = generate_haffman_dic_internal(right, HaffmanCompressedCode {val: (current_compress_code.val << 1) + 0, mask: (current_compress_code.mask << 1) + 1});
 
     left_map.extend(right_map);
 
-    left_map
+    return left_map;
 }
