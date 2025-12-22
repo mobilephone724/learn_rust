@@ -34,6 +34,11 @@ fn main() {
         println!("key: {}, value: {}", key, value);
     }
 
+    let code = huffman_compress::HaffmanCompressedCode {val: 7, mask: 63};
+    println!("{}", code);
+
+
+
     // println!("map is {}", haffman_map);
 
 

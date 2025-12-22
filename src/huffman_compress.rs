@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use std::fmt::format;
+use std::string;
 
 #[derive(Eq, PartialEq)]
 pub struct HuffmanTreeNode {
@@ -32,6 +33,49 @@ impl PartialOrd for HuffmanTreeNode {
 //     values
 // }
 
+pub type HuffmanTree = BinaryHeap<HuffmanTreeNode>;
+
+// Using a tuple (most common for pairs)
+
+// Or using a struct for more clarity
+pub struct HaffmanCompressedCode {
+    pub val: i32,
+    pub mask: i32
+}
+
+impl std::fmt::Display for HaffmanCompressedCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut out: String = Default::default();
+
+        for i in 0..32 {
+            let single_bit_mask: i32 = 1 << i;
+            if self.mask & single_bit_mask == 0 {
+                break;
+
+                
+            } else {
+                if self.val & single_bit_mask == 0 {
+                    out.push('0');
+                } else {
+                    out.push('1');
+                }
+            }
+        }
+        out = out.chars().rev().collect();
+
+        write!(f, "HaffmanCompressedCode {{ val: {}, mask: {}, output {} }}", self.val, self.mask, out)
+    }
+}
+
+impl std::fmt::Debug for HaffmanCompressedCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "HaffmanCompressedCode {{ val: {}, mask: {} }}", self.val, self.mask)
+    }
+}
+
+// For your specific use case with Huffman encoding:
+
+
 pub fn generate_haffman_tree_nodes() -> Vec<HuffmanTreeNode> {
     let mut res: Vec<HuffmanTreeNode> = Vec::new();
 
@@ -59,26 +103,12 @@ pub fn generate_haffman_tree_nodes() -> Vec<HuffmanTreeNode> {
     res
 }
 
-pub fn generate_haffman_tree(nodes: Vec<HuffmanTreeNode>) -> BinaryHeap<HuffmanTreeNode> {
-    let mut res: BinaryHeap<HuffmanTreeNode> = BinaryHeap::new();
+pub fn generate_haffman_tree(nodes: Vec<HuffmanTreeNode>) -> HuffmanTree {
+    let mut res: HuffmanTree = BinaryHeap::new();
 
     for node in nodes {
         res.push(node)
     }
-
-    // while res.len() > 1 {
-    //     let left: HuffmanTreeNode = res.pop().unwrap();
-    //     let right: HuffmanTreeNode = res.pop().unwrap();
-
-    //     let merged = HuffmanTreeNode {
-    //         weight: left.weight + right.weight,
-    //         substr: format!("{}{}", left.substr, right.substr),
-    //         left: Some(Box::new(left)),
-    //         right: Some(Box::new(right)),
-    //     };
-
-    //     res.push(merged);
-    // }
 
     while res.len() > 1 {
         let Some(n1) = res.pop() else {
@@ -101,33 +131,6 @@ pub fn generate_haffman_tree(nodes: Vec<HuffmanTreeNode>) -> BinaryHeap<HuffmanT
 
     res
 }
-
-// pub struct HuffmanTree {
-//     pub heap :BinaryHeap<HuffmanTreeNode>,
-// };
-
-// pub fn example_map() {
-
-//     let mut map = HashMap::new();
-//     map.insert("A", 10);
-//     map.insert("B", 20);
-//     map.insert("C", 25);
-
-//     if let Some(value) = map.get("A") {
-//         println!("Value for A: {}", value);
-//     }
-
-//     for (key, value) in &map {
-//         println!("{}: {}", key, value);
-//     }
-// }
-// let mut map1 = HashMap::new();
-// map1.insert('A', 1);
-
-// let mut map2 = HashMap::new();
-// map2.insert('B', 2);
-
-// map1.extend(map2);
 
 
 pub fn generate_haffman_dic(node_tree: &mut BinaryHeap<HuffmanTreeNode>) -> HashMap<char, String> {
@@ -161,7 +164,6 @@ fn generate_haffman_dic_internal(node: &Box<HuffmanTreeNode>, prefix: &String) -
         panic!("cannot get the right child in node {} with weight {}", node.substr, node.weight);
     };
 
-    // use parentheses to control precedence; here we append a 1-bit for left, 0-bit for right
     let mut left_map = generate_haffman_dic_internal(left, &format!("{}1", prefix));
     let right_map = generate_haffman_dic_internal(right, &format!("{}0", prefix));
 
