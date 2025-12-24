@@ -2,12 +2,13 @@ use bitvec::prelude::*;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
-use std::fmt::format;
-use std::string;
+use std::fs::File;
+use std::io::Read;
+
 
 #[derive(Eq, PartialEq)]
 pub struct HuffmanTreeNode {
-    pub weight: i32,
+    pub weight: u64,
     pub val: Vec<u8>,
     pub left: Option<Box<HuffmanTreeNode>>,
     pub right: Option<Box<HuffmanTreeNode>>,
@@ -103,10 +104,10 @@ fn generate_haffman_dic_internal(
     node: &Box<HuffmanTreeNode>,
     mut current_compress_code: HaffmanCompressedCode,
 ) -> HaffmanCompressedDict {
-    println!(
-        "In haffman dic recursion: cur node is {:?} with prefix {}",
-        node.val, &current_compress_code
-    );
+    // println!(
+    //     "In haffman dic recursion: cur node is {:?} with prefix {}",
+    //     node.val, &current_compress_code
+    // );
 
     if node.val.len() == 1 {
         let mut res: HaffmanCompressedDict = HashMap::new();
@@ -115,10 +116,10 @@ fn generate_haffman_dic_internal(
             current_compress_code.push(false);
         }
 
-        println!(
-            "length is 1, return single value {}-{}",
-            node.val[0], &current_compress_code
-        );
+        // println!(
+        //     "length is 1, return single value {}-{}",
+        //     node.val[0], &current_compress_code
+        // );
 
         res.insert(node.val[0], current_compress_code);
 
@@ -151,4 +152,41 @@ fn generate_haffman_dic_internal(
     left_map.extend(right_map);
 
     return left_map;
+}
+
+pub fn generate_haffman_tree_nodes_with_frequency(frequency: &Vec<u64>) -> Vec<HuffmanTreeNode> {
+    let mut res: Vec<HuffmanTreeNode> = Vec::new();
+
+    for i in 0..frequency.len() {
+        if frequency[i] == 0 {
+            continue;
+        }
+
+        res.push(HuffmanTreeNode {
+            weight: frequency[i],
+            val: vec![i.try_into().expect("size of frequency must not be greater than 255")],
+            left: None,
+            right: None,
+        });
+    }
+
+    res
+}
+
+pub fn generate_haffman_dic_from_file(file_path: &str) -> HaffmanCompressedDict {
+    let mut file = File::open(file_path).expect("failed to open data.bin");
+    let mut contents: Vec<u8> = Vec::new();
+    file.read_to_end(&mut contents).expect("failed to read file contents");
+
+    let mut frequency: Vec<u64> = vec![0u64; 256];
+    for ch in contents {
+        frequency[ch as usize] += 1;
+    }
+
+    let tree_nodes = generate_haffman_tree_nodes_with_frequency(&frequency);
+    let mut tree = generate_haffman_tree(tree_nodes);
+    let dic = generate_haffman_dic(&mut tree);
+    // let dic = generate_haffman_dic(&mut generate_haffman_tree(generate_haffman_tree_nodes_with_frequency(&frequency)));
+
+    return dic;
 }
