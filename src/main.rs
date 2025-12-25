@@ -24,4 +24,9 @@ fn main() {
         println!("key: {}, value: {}", key, value);
     }
 
+    let new_content = huffman_compress::generate_new_content_from_file("data.bin", &dic);
+
+    println!("new content is: {}", &new_content);
+    println!("length of new content is: {}", new_content.len());
+
 }

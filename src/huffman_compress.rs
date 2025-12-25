@@ -31,6 +31,8 @@ pub type HuffmanTree = BinaryHeap<HuffmanTreeNode>;
 
 pub type HaffmanCompressedCode = BitVec<u8, Msb0>;
 
+pub type CompressedContent = BitVec<u8, Msb0>;
+
 pub type HaffmanCompressedDict = HashMap<u8, HaffmanCompressedCode>;
 
 pub fn generate_haffman_tree_nodes() -> Vec<HuffmanTreeNode> {
@@ -189,4 +191,25 @@ pub fn generate_haffman_dic_from_file(file_path: &str) -> HaffmanCompressedDict 
     // let dic = generate_haffman_dic(&mut generate_haffman_tree(generate_haffman_tree_nodes_with_frequency(&frequency)));
 
     return dic;
+}
+
+
+pub fn generate_new_content_from_file(file_path: &str, dic: &HaffmanCompressedDict) ->  CompressedContent {
+
+    let mut file = File::open(file_path).expect("failed to open data.bin");
+    let mut contents: Vec<u8> = Vec::new();
+    file.read_to_end(&mut contents).expect("failed to read file contents");
+
+    let mut res: CompressedContent = BitVec::new();
+
+    println!("length of original content is: {}", contents.len());
+
+    for ch in contents {
+        let compressed_code = dic.get(&ch).expect("unrecognized charactor");
+
+        // res.extend_from_bitslice(compressed_code.as_bitslice());
+        res.extend(compressed_code.iter());
+    }
+
+    return res;
 }
