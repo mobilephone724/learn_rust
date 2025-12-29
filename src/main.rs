@@ -9,24 +9,21 @@ use bitvec::prelude::*;
 fn main() {
     println!("Hello, world!");
 
-    // let mut heap = huffman_compress::generate_haffman_tree(huffman_compress::generate_haffman_tree_nodes());
+    let (dic, frequency) = huffman_compress::generate_haffman_dic_from_file("data.bin");
 
-    // let haffman_map = huffman_compress::generate_haffman_dic(&mut heap);
-
-    // for (key, value) in &haffman_map {
-    //     println!("key: {}, value: {}", key, value);
-    // }
-
-
-    let dic = huffman_compress::generate_haffman_dic_from_file("data.bin");
-
-    for (key, value) in &dic {
-        println!("key: {}, value: {}", key, value);
+    for (key, value) in &dic.compressed_dict {
+        println!("key: {}, value: {}", key, value.val);
     }
 
-    let new_content = huffman_compress::generate_new_content_from_file("data.bin", &dic);
+    match huffman_compress::generate_new_file(
+        "data.bin",
+        "data.bin.compressed",
+        &dic.compressed_dict,
+        &frequency
+    ) {
+        Ok(()) => println!("compress successfull!"),
+        Err(e) => eprintln!("Failed to write: {}", e),
+    }
 
-    println!("new content is: {}", &new_content);
-    println!("length of new content is: {}", new_content.len());
-
+    let _ = huffman_compress::read_compressed_file("data.bin.compressed");
 }
