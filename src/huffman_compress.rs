@@ -42,12 +42,6 @@ impl HaffmanCompressedCode {
         HaffmanCompressedCode { val: BitVec::new() }
     }
 
-    pub fn from_bit(value: bool) -> Self {
-        let mut val: BitVec<u8, Msb0> = BitVec::new();
-        val.push(value);
-        HaffmanCompressedCode { val }
-    }
-
     pub fn is_empty(&self) -> bool {
         return self.val.is_empty();
     }
@@ -70,7 +64,7 @@ impl HaffmanCompressedCode {
         self.val.push(value);
     }
 
-    pub fn iter(&self) -> Iter<u8, Msb0> {
+    pub fn iter(&self) -> Iter<'_, u8, Msb0> {
         self.val.iter()
     }
 
@@ -363,7 +357,8 @@ pub fn read_compressed_file(file_path: &str) -> std::io::Result<()> {
         })
         .collect(); // Gather into the Vec
 
-    let bit_len = u64::from_be_bytes(contents[(256 * 8)..(256 * 8 + 8)].try_into().unwrap());
+    // let bit_len = u64::from_be_bytes(contents[(256 * 8)..(256 * 8 + 8)].try_into().unwrap());
+    let bit_len = u64::from_le_bytes(contents[(256 * 8)..(256 * 8 + 8)].try_into().unwrap());
 
     let tree_nodes = generate_haffman_tree_nodes_with_frequency(&frequency);
     let mut tree = generate_haffman_tree(tree_nodes);
