@@ -1,7 +1,6 @@
 mod bstree;
 mod huffman_compress;
 mod option_test;
-use bitvec::prelude::*;
 // use crate::huffman_compress::HuffmanTreeNode;
 // use std::collections::BinaryHeap;
 // use bstree::*;
@@ -9,21 +8,34 @@ use bitvec::prelude::*;
 fn main() {
     println!("Hello, world!");
 
-    let (dic, frequency) = huffman_compress::generate_haffman_dic_from_file("data.bin");
+    // let some_content = "hello".to_string();
+    // println!("Original content: {:?}", some_content);
 
-    for (key, value) in &dic.compressed_dict {
-        println!("key: {}, value: {}", key, value.val);
-    }
+    // let Ok(compressed_content) = huffman_compress::compress(&some_content.into_bytes()) else {
+    //     panic!("compress failed");
+    // };
 
-    match huffman_compress::generate_new_file(
-        "data.bin",
-        "data.bin.compressed",
-        &dic.compressed_dict,
-        &frequency
-    ) {
-        Ok(()) => println!("compress successfull!"),
-        Err(e) => eprintln!("Failed to write: {}", e),
-    }
+    // let Ok(decompressed_content) = huffman_compress::decompress(&compressed_content) else {
+    //     panic!("decompress failed");
+    // };
 
-    let _ = huffman_compress::read_compressed_file("data.bin.compressed");
+    // let Ok(decompressed_string) = String::from_utf8(decompressed_content) else {
+    //     panic!("tranform to string failed");
+    // };
+    // println!("decompress result is {:?}", decompressed_string);
+
+
+    // let _ = huffman_compress::file_compress("assets/img_2026-01-20T13:57:11.833Z.png", "data.bin.compressed");
+
+    // let _ = huffman_compress::file_decompress("data.bin.compressed", "assets/img_2026-01-20T13:57:11.833Z.origin.png");
+
+
+
+            // match decompressed_content {
+            //     Ok(content) => match String::from_utf8(content) {
+            //         Ok(string_content) => println!("Decompression successful: {:?}", string_content),
+            //         Err(e) => eprintln!("Failed to convert decompressed content to string: {:?}", e),
+            //     },
+            //     Err(e) => eprintln!("Decompression failed: {:?}", e),
+            // }
 }
