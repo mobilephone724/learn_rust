@@ -1,6 +1,5 @@
 use bitvec::prelude::*;
 use bitvec::slice::Iter;
-use std::array;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
@@ -20,18 +19,49 @@ use std::io::{Read, Write};
  *
  */
 
+/// Custom error type for Huffman compression operations.
+#[derive(Debug)]
+pub enum HuffmanError {
+    /// Invalid input data.
+    InvalidInput(String),
+    /// Error building the Huffman tree.
+    TreeBuildError(String),
+    /// Error during compression.
+    CompressionError(String),
+    /// Error during decompression.
+    DecompressionError(String),
+}
+
+impl fmt::Display for HuffmanError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            HuffmanError::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
+            HuffmanError::TreeBuildError(msg) => write!(f, "Tree build error: {}", msg),
+            HuffmanError::CompressionError(msg) => write!(f, "Compression error: {}", msg),
+            HuffmanError::DecompressionError(msg) => write!(f, "Decompression error: {}", msg),
+        }
+    }
+}
+
+impl Error for HuffmanError {}
+
 /* (1) Tree Node and Tree */
+/// A node in the Huffman tree.
 #[derive(Eq, PartialEq)]
 struct HuffmanTreeNode {
+    /// The weight (frequency) of this node.
     pub weight: u64,
+    /// The value(s) this node represents. For leaves, a single byte; for internal, combined.
     pub val: Vec<u8>,
+    /// Left child.
     pub left: Option<Box<HuffmanTreeNode>>,
+    /// Right child.
     pub right: Option<Box<HuffmanTreeNode>>,
 }
 
 impl Ord for HuffmanTreeNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        // reserve
+        // Reverse order for min-heap behavior in BinaryHeap
         other.weight.cmp(&self.weight)
     }
 }
@@ -43,16 +73,17 @@ impl PartialOrd for HuffmanTreeNode {
 }
 
 const MAX_CHAR: usize = 255;
-type HaffmanFrequency = [u64; MAX_CHAR + 1];
+type HuffmanFrequency = [u64; MAX_CHAR + 1];
 
+/// The Huffman tree, represented as a binary heap with the root at the top.
 struct HuffmanTree {
     pub tree: BinaryHeap<HuffmanTreeNode>,
 }
 
 impl HuffmanTree {
-    fn generate_haffman_tree_nodes_with_frequency(
-        frequency: &HaffmanFrequency,
-    ) -> Result<Vec<HuffmanTreeNode>, String> {
+    fn generate_huffman_tree_nodes_with_frequency(
+        frequency: &HuffmanFrequency,
+    ) -> Result<Vec<HuffmanTreeNode>, HuffmanError> {
         let mut res: Vec<HuffmanTreeNode> = Vec::new();
 
         for i in 0..frequency.len() {
@@ -60,7 +91,7 @@ impl HuffmanTree {
                 continue;
             }
 
-            let idx: u8 = i.try_into().map_err(|_| "Failed to convert index to u8")?;
+            let idx: u8 = i.try_into().map_err(|_| HuffmanError::InvalidInput("Failed to convert index to u8".to_string()))?;
 
             res.push(HuffmanTreeNode {
                 weight: frequency[i],
@@ -73,7 +104,7 @@ impl HuffmanTree {
         Ok(res)
     }
 
-    pub fn from_nodes(huffman_tree_nodes: Vec<HuffmanTreeNode>) -> Result<Self, String> {
+    pub fn from_nodes(huffman_tree_nodes: Vec<HuffmanTreeNode>) -> Result<Self, HuffmanError> {
         let mut tree = BinaryHeap::new();
 
         for node in huffman_tree_nodes {
@@ -82,11 +113,11 @@ impl HuffmanTree {
 
         while tree.len() >= 2 {
             let Some(n1) = tree.pop() else {
-                return Err("fail to get n1 while generating huffman tree".to_string());
+                return Err(HuffmanError::TreeBuildError("fail to get n1 while generating huffman tree".to_string()));
             };
 
             let Some(n2) = tree.pop() else {
-                return Err("fail to get n2 while generating huffman tree".to_string());
+                return Err(HuffmanError::TreeBuildError("fail to get n2 while generating huffman tree".to_string()));
             };
 
             let mut new_val = n1.val.clone();
@@ -103,36 +134,37 @@ impl HuffmanTree {
         Ok(HuffmanTree { tree })
     }
 
-    pub fn from_frequency(frequency: &HaffmanFrequency) -> Result<Self, String> {
-        let nodes = HuffmanTree::generate_haffman_tree_nodes_with_frequency(frequency)?;
+    pub fn from_frequency(frequency: &HuffmanFrequency) -> Result<Self, HuffmanError> {
+        let nodes = HuffmanTree::generate_huffman_tree_nodes_with_frequency(frequency)?;
 
         HuffmanTree::from_nodes(nodes)
     }
 }
 
 /* (2) Compressed Code */
+/// Represents a Huffman compressed code as a sequence of bits.
 #[derive(Clone, PartialEq, Eq, Hash)]
-struct HaffmanCompressedCode {
+struct HuffmanCompressedCode {
     pub val: BitVec<u8, Msb0>,
 }
 
-impl HaffmanCompressedCode {
+impl HuffmanCompressedCode {
     pub fn new() -> Self {
-        HaffmanCompressedCode { val: BitVec::new() }
+        HuffmanCompressedCode { val: BitVec::new() }
     }
 
     pub fn is_empty(&self) -> bool {
         return self.val.is_empty();
     }
 
-    pub fn get_left(&self) -> HaffmanCompressedCode {
+    pub fn get_left(&self) -> HuffmanCompressedCode {
         let mut left_code = self.clone();
         left_code.val.push(false);
 
         left_code
     }
 
-    pub fn get_right(&self) -> HaffmanCompressedCode {
+    pub fn get_right(&self) -> HuffmanCompressedCode {
         let mut left_code = self.clone();
         left_code.val.push(true);
 
@@ -155,25 +187,26 @@ impl HaffmanCompressedCode {
 type CompressedContent = BitVec<u8, Msb0>;
 
 /* (3) bidirection map */
-type HaffmanCompressedDict = HashMap<u8, HaffmanCompressedCode>;
-type HaffmanOriginDict = HashMap<HaffmanCompressedCode, u8>;
+type HuffmanCompressedDict = HashMap<u8, HuffmanCompressedCode>;
+type HuffmanOriginDict = HashMap<HuffmanCompressedCode, u8>;
 
+/// Bidirectional mapping between original bytes and their Huffman codes.
 struct HuffmanMap {
-    pub compressed_dict: HaffmanCompressedDict,
-    pub original_dict: HaffmanOriginDict,
+    pub compressed_dict: HuffmanCompressedDict,
+    pub original_dict: HuffmanOriginDict,
 }
 
 impl HuffmanMap {
-    pub fn from_haffman_tree(haffman_tree: &HuffmanTree) -> Result<Self, String> {
-        let root = haffman_tree.tree.peek().ok_or("no root in huffman tree")?;
+    pub fn from_huffman_tree(huffman_tree: &HuffmanTree) -> Result<Self, HuffmanError> {
+        let root = huffman_tree.tree.peek().ok_or(HuffmanError::TreeBuildError("no root in huffman tree".to_string()))?;
 
-        HuffmanMap::generate_haffman_dic_internal(root, HaffmanCompressedCode::new())
+        HuffmanMap::generate_huffman_dict_internal(root, HuffmanCompressedCode::new())
     }
 
     fn new() -> Self {
         HuffmanMap {
-            compressed_dict: HaffmanCompressedDict::new(),
-            original_dict: HaffmanOriginDict::new(),
+            compressed_dict: HuffmanCompressedDict::new(),
+            original_dict: HuffmanOriginDict::new(),
         }
     }
 
@@ -182,15 +215,15 @@ impl HuffmanMap {
         self.original_dict.extend(another_map.original_dict);
     }
 
-    fn insert(&mut self, origin: u8, compressed: &HaffmanCompressedCode) {
+    fn insert(&mut self, origin: u8, compressed: &HuffmanCompressedCode) {
         self.compressed_dict.insert(origin, compressed.clone());
         self.original_dict.insert(compressed.clone(), origin);
     }
 
-    fn generate_haffman_dic_internal(
+    fn generate_huffman_dict_internal(
         node: &HuffmanTreeNode,
-        mut current_compress_code: HaffmanCompressedCode,
-    ) -> Result<HuffmanMap, String> {
+        mut current_compress_code: HuffmanCompressedCode,
+    ) -> Result<HuffmanMap, HuffmanError> {
         /* Have reached the bottom? */
         if node.val.len() == 1 {
             let mut res = HuffmanMap::new();
@@ -206,17 +239,17 @@ impl HuffmanMap {
 
         /* Recursive left and right node */
         let Some(left) = node.left.as_ref() else {
-            return Err("cannot get the left child while traverse haffman tree".to_string());
+            return Err(HuffmanError::TreeBuildError("cannot get the left child while traverse huffman tree".to_string()));
         };
 
         let Some(right) = node.right.as_ref() else {
-            return Err("cannot get the right child while traverse haffman tree".to_string());
+            return Err(HuffmanError::TreeBuildError("cannot get the right child while traverse huffman tree".to_string()));
         };
 
         let mut left_map =
-            HuffmanMap::generate_haffman_dic_internal(left, current_compress_code.get_left())?;
+            HuffmanMap::generate_huffman_dict_internal(left, current_compress_code.get_left())?;
         let right_map =
-            HuffmanMap::generate_haffman_dic_internal(right, current_compress_code.get_right())?;
+            HuffmanMap::generate_huffman_dict_internal(right, current_compress_code.get_right())?;
 
         left_map.extend(right_map);
 
@@ -225,11 +258,11 @@ impl HuffmanMap {
 }
 
 /* public API */
-pub fn compress(content: &Vec<u8>) -> Result<Vec<u8>, String> {
+pub fn compress(content: &Vec<u8>) -> Result<Vec<u8>, HuffmanError> {
     let mut compressed_result: Vec<u8> = Vec::new();
 
     /* get and write frequency */
-    let mut frequency: HaffmanFrequency = [0u64; 256];
+    let mut frequency: HuffmanFrequency = [0u64; 256];
 
     for ch in content {
         frequency[*ch as usize] += 1;
@@ -250,7 +283,7 @@ pub fn compress(content: &Vec<u8>) -> Result<Vec<u8>, String> {
 
     /* generate dictionary */
     let tree = HuffmanTree::from_frequency(&frequency)?;
-    let dic = HuffmanMap::from_haffman_tree(&tree)?;
+    let dic = HuffmanMap::from_huffman_tree(&tree)?;
 
     /* and append compressed data */
     let mut compressed_content_length_in_bit: i64 = 0;
@@ -258,7 +291,7 @@ pub fn compress(content: &Vec<u8>) -> Result<Vec<u8>, String> {
     let mut filled: u8 = 0;
     for ch in content {
         let Some(compressed_code) = dic.compressed_dict.get(&ch) else {
-            return Err("charactor doesn't in dictionary".to_string());
+            return Err(HuffmanError::CompressionError("character not in dictionary".to_string()));
         };
 
         for bit in compressed_code.val.iter() {
@@ -289,16 +322,16 @@ pub fn compress(content: &Vec<u8>) -> Result<Vec<u8>, String> {
     Ok(compressed_result)
 }
 
-pub fn decompress(content: &Vec<u8>) -> Result<Vec<u8>, String> {
+pub fn decompress(content: &Vec<u8>) -> Result<Vec<u8>, HuffmanError> {
     let header_len = 8 * (256 + 1);
     const FREQUENCY_LEN: usize = 256;
 
     // get length first
     if content.len() < header_len {
-        return Err("content is too small to contain header".to_string());
+        return Err(HuffmanError::DecompressionError("content is too small to contain header".to_string()));
     }
 
-    let mut frequency: HaffmanFrequency = [0u64; FREQUENCY_LEN];
+    let mut frequency: HuffmanFrequency = [0u64; FREQUENCY_LEN];
     for (i, chunk) in content.chunks_exact(8).enumerate() {
         if i >= FREQUENCY_LEN {
             break;
@@ -315,11 +348,11 @@ pub fn decompress(content: &Vec<u8>) -> Result<Vec<u8>, String> {
     }
 
     let tree = HuffmanTree::from_frequency(&frequency)?;
-    let dic = HuffmanMap::from_haffman_tree(&tree)?;
+    let dic = HuffmanMap::from_huffman_tree(&tree)?;
     let dic = dic.original_dict;
 
     let mut bit_read = 0;
-    let mut compressed_code: HaffmanCompressedCode = HaffmanCompressedCode::new();
+    let mut compressed_code: HuffmanCompressedCode = HuffmanCompressedCode::new();
 
     let mut decompressed_content: Vec<u8> = Vec::new();
     for (index, &ch) in content.iter().enumerate() {
@@ -352,7 +385,7 @@ pub fn decompress(content: &Vec<u8>) -> Result<Vec<u8>, String> {
     }
 
     if !compressed_code.is_empty() {
-        return Err("some content remains".to_string());
+        return Err(HuffmanError::DecompressionError("some content remains".to_string()));
     }
 
     Ok(decompressed_content)
@@ -361,14 +394,14 @@ pub fn decompress(content: &Vec<u8>) -> Result<Vec<u8>, String> {
 #[derive(Debug)]
 pub enum FileCompressError {
     Io(std::io::Error),
-    Internal(String),
+    Huffman(HuffmanError),
 }
 
 impl fmt::Display for FileCompressError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             FileCompressError::Io(ref err) => write!(f, "IO error: {}", err),
-            FileCompressError::Internal(ref err) => write!(f, "Internal error: {}", err),
+            FileCompressError::Huffman(ref err) => write!(f, "Huffman error: {}", err),
         }
     }
 }
@@ -377,7 +410,7 @@ impl Error for FileCompressError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match *self {
             FileCompressError::Io(ref err) => Some(err),
-            FileCompressError::Internal(_) => None,
+            FileCompressError::Huffman(ref err) => Some(err),
         }
     }
 }
@@ -388,9 +421,9 @@ impl From<std::io::Error> for FileCompressError {
     }
 }
 
-impl From<String> for FileCompressError {
-    fn from(err: String) -> Self {
-        FileCompressError::Internal(err)
+impl From<HuffmanError> for FileCompressError {
+    fn from(err: HuffmanError) -> Self {
+        FileCompressError::Huffman(err)
     }
 }
 
